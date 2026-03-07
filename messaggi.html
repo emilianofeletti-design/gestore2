@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Pratiche - Europa Factor & Enel</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --light: #f4f6f9;
+            --dark: #333;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--light); color: var(--dark); margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
+        h2 { font-size: 1.2rem; color: var(--secondary); margin-top: 30px; }
+
+        /* Loader Database */
+        .db-loader { background: #eef2f5; padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: center; border: 2px dashed var(--primary); }
+        .btn-db { padding: 10px 20px; font-size: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; margin: 5px; transition: 0.3s; }
+        .btn-connect { background: var(--primary); color: white; }
+        .btn-restore { background: #fd7e14; color: white; }
+        .btn-change { background: var(--secondary); color: white; }
+        .btn-db:hover { opacity: 0.85; transform: translateY(-1px); }
+        #statusDb { margin-top: 10px; font-weight: bold; }
+
+        /* Grid Dati */
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; text-transform: uppercase; }
+        .input-group input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; outline: none; transition: border 0.3s; }
+        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(0,86,179,0.2); }
+
+        /* Area Messaggi */
+        .message-section { margin-top: 20px; }
+        .category-header { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+        select { flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; background: white; cursor: pointer; }
+        .btn-rename { background: var(--secondary); color: white; padding: 12px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        .message-card { background: white; border: 1px solid #eee; border-left: 6px solid var(--primary); padding: 20px; margin-bottom: 15px; border-radius: 4px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s; }
+        .message-card.is-pinned { border-left-color: var(--warning); background-color: #fffcf0; }
+        .message-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        
+        /* Contenitore testo e badge */
+        .message-content { flex-grow: 1; padding-right: 20px; }
+        .message-text { font-size: 15px; line-height: 1.5; white-space: pre-wrap; color: #444; }
+        .click-badge { font-size: 11px; color: #888; margin-top: 8px; display: inline-block; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold;}
+        
+        /* Alert per campi vuoti */
+        .missing-tag { color: #dc3545; font-weight: bold; background: #fff0f0; padding: 0 2px; border-radius: 2px; }
+
+        .action-btns { display: flex; flex-direction: column; gap: 8px; min-width: 110px; }
+        .btn-action { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; text-align: center; }
+        
+        .btn-pin { background: #e2e3e5; color: #383d41; }
+        .btn-pin.active { background: var(--warning); color: #333; }
+        
+        .btn-copy { background: var(--success); color: white; }
+        .btn-edit { background: var(--info); color: white; }
+        .btn-delete { background: var(--danger); color: white; }
+        .btn-action:hover { filter: brightness(1.1); }
+
+        /* Editor Nuove Frasi */
+        .add-phrase-section { margin-top: 50px; background: #fffcf0; padding: 25px; border-radius: 12px; border: 1px solid #ffeeba; }
+        textarea { width: 100%; height: 100px; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd; resize: vertical; font-family: inherit; box-sizing: border-box; }
+        .tag-container { margin: 10px 0; display: flex; flex-wrap: wrap; gap: 5px; }
+        .tag-btn { background: #e9ecef; border: 1px solid #dee2e6; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .tag-btn:hover { background: #dee2e6; }
+        .btn-save-new { background: var(--warning); color: #333; padding: 12px 25px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+
+        /* MODALE DI MODIFICA */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content { 
+            background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 700px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative;
+        }
+        .modal-header { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+        .footer-note { text-align: center; margin-top: 30px; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📩 Gestione Messaggi Pratiche</h1>
+    
+    <div class="db-loader">
+        <button id="btnConnect" class="btn-db btn-connect" onclick="selezionaNuovoFile()">🔗 Seleziona database.json</button>
+        <button id="btnRestore" class="btn-db btn-restore" style="display: none;" onclick="ripristinaAccesso()">🔄 Ripristina Accesso</button>
+        <button id="btnChange" class="btn-db btn-change" style="display: none;" onclick="selezionaNuovoFile()">📁 Cambia File</button>
+        <p id="statusDb" style="color: var(--danger);">❌ Database non collegato</p>
+    </div>
+
+    <h2>📝 Dati della Pratica</h2>
+    <div class="input-grid">
+        <div class="input-group"><label>Nominativo / Azienda</label><input type="text" id="NOMINATIVO" placeholder="Mario Rossi"></div>
+        <div class="input-group"><label>N. Pratica</label><input type="text" id="PRATICA" placeholder="123456"></div>
+        <div class="input-group"><label>Codice Cliente Enel</label><input type="text" id="COD_CLIENTE" placeholder="987654321"></div>
+        <div class="input-group"><label>Codice Fiscale / P.IVA</label><input type="text" id="CODICE_FISCALE" placeholder="RSSMRA..."></div>
+        <div class="input-grid-break" style="grid-column: 1 / -1; height: 0;"></div>
+        <div class="input-group"><label>Insoluto Totale (€)</label><input type="text" id="INSOLUTO" placeholder="4045,00"></div>
+        <div class="input-group"><label>Importo da Pagare (€)</label><input type="text" id="DA_PAGARE" placeholder="100,00"></div>
+        <div class="input-group"><label>Scadenza / Data</label><input type="text" id="DATA" placeholder="gg/mm/aaaa"></div>
+        <div class="input-group"><label>Email Cliente</label><input type="text" id="EMAIL" placeholder="cliente@mail.com"></div>
+        <div class="input-group"><label>Operatore (Firma)</label><input type="text" id="OPERATORE" value="Feletti"></div>
+    </div>
+
+    <div class="message-section">
+        <h2>📋 Seleziona Messaggio</h2>
+        <div class="category-header">
+            <select id="categoriaSelect" disabled onchange="aggiornaRisultati()">
+                <option value="">-- Seleziona una categoria --</option>
+            </select>
+            <button class="btn-rename" onclick="rinominaCategoriaCorrente()" title="Rinomina questa categoria">✏️ Rinomina</button>
+        </div>
+        <div id="risultati"></div>
+    </div>
+
+    <div class="add-phrase-section">
+        <h2>➕ Aggiungi Nuova Frase</h2>
+        <label style="font-size: 12px; font-weight: bold;">Categoria:</label>
+        <select id="nuovaCategoria" onchange="controllaNuovaCategoria(this)"></select>
+        <div class="tag-container tag-target-add"></div>
+        <textarea id="nuovaFraseTesto" placeholder="Scrivi il testo qui..."></textarea>
+        <button class="btn-save-new" onclick="aggiungiFrase()">💾 Salva nel file</button>
+    </div>
+
+    <div class="footer-note">Sincronizzazione File System Attiva</div>
+</div>
+
+<div class="modal-overlay" id="modalEdit">
+    <div class="modal-content">
+        <div class="modal-header"><h3>🛠 Modifica Frase</h3></div>
+        <label style="font-size: 13px; font-weight: bold;">Categoria:</label>
+        <select id="editCategoria" style="margin-top:5px"></select>
+        <div class="tag-container tag-target-edit"></div>
+        <textarea id="editTesto" style="height: 150px;"></textarea>
+        <div class="modal-footer">
+            <button class="btn-db btn-change" onclick="chiudiModale()">Annulla</button>
+            <button class="btn-db btn-connect" onclick="salvaModifica()">Salva Modifiche</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let databaseFrasi = [];
+    let fileHandle; 
+    let editingIndex = -1;
+    const tags = ['[NOMINATIVO]', '[PRATICA]', '[COD_CLIENTE]', '[CODICE_FISCALE]', '[INSOLUTO]', '[DA_PAGARE]', '[DATA]', '[EMAIL]', '[OPERATORE]'];
+
+    const dbName = "AppPraticheSafeDB";
+    const storeName = "handles";
+
+    function getDB() {
+        return new Promise((resolve, reject) => {
+            let req = indexedDB.open(dbName, 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore(storeName);
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e.target.error);
+        });
+    }
+
+    async function storeFileHandle(handle) {
+        let db = await getDB();
+        db.transaction(storeName, 'readwrite').objectStore(storeName).put(handle, 'lastHandle');
+    }
+
+    async function getStoredHandle() {
+        let db = await getDB();
+        return new Promise(resolve => {
+            let req = db.transaction(storeName, 'readonly').objectStore(storeName).get('lastHandle');
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = () => resolve(null);
+        });
+    }
+
+    function impostaDataDefault() {
+        const oggi = new Date();
+        oggi.setDate(oggi.getDate() + 4);
+        const gg = String(oggi.getDate()).padStart(2, '0');
+        const mm = String(oggi.getMonth() + 1).padStart(2, '0');
+        const aaaa = oggi.getFullYear();
+        document.getElementById('DATA').value = `${gg}/${mm}/${aaaa}`;
+    }
+
+    window.onload = async () => {
+        impostaDataDefault();
+        const stored = await getStoredHandle();
+        if (stored) {
+            fileHandle = stored;
+            document.getElementById('btnConnect').style.display = 'none';
+            document.getElementById('btnRestore').style.display = 'inline-block';
+            document.getElementById('btnChange').style.display = 'inline-block';
+            document.getElementById('statusDb').innerHTML = `💾 File: <b>${fileHandle.name}</b>. Ripristina l'accesso.`;
+        }
+        generaPulsantiTag();
+    };
+
+    function generaPulsantiTag() {
+        ['.tag-target-add', '.tag-target-edit'].forEach(selector => {
+            const container = document.querySelector(selector);
+            const targetId = selector.includes('add') ? 'nuovaFraseTesto' : 'editTesto';
+            tags.forEach(t => {
+                let b = document.createElement('button');
+                b.className = 'tag-btn'; b.innerText = t;
+                b.onclick = () => { 
+                    const txt = document.getElementById(targetId);
+                    txt.value += t + ' '; txt.focus(); 
+                    if(targetId === 'nuovaFraseTesto') aggiornaRisultati();
+                };
+                container.appendChild(b);
+            });
+        });
+    }
+
+    async function selezionaNuovoFile() {
+        try {
+            [fileHandle] = await window.showOpenFilePicker({
+                types: [{ description: 'JSON', accept: {'application/json': ['.json']} }],
+                multiple: false
+            });
+            await storeFileHandle(fileHandle);
+            await ricaricaDati();
+        } catch (e) {}
+    }
+
+    async function ripristinaAccesso() {
+        if (!fileHandle) return;
+        try {
+            if ((await fileHandle.requestPermission({mode: 'readwrite'})) === 'granted') {
+                await ricaricaDati();
+            }
+        } catch (e) { alert("Errore nel ripristino."); }
+    }
+
+    async function ricaricaDati() {
+        const file = await fileHandle.getFile();
+        databaseFrasi = JSON.parse(await file.text());
+        
+        // MODIFICA: Assicurati che ogni frase abbia i campi pinned e count
+        databaseFrasi = databaseFrasi.map(f => ({ 
+            ...f, 
+            pinned: f.pinned || false,
+            count: f.count || 0
+        }));
+
+        aggiornaTuttiMenuCategorie();
+        document.getElementById('statusDb').innerHTML = `✅ Connesso: <b>${file.name}</b>`;
+        document.getElementById('statusDb').style.color = "var(--success)";
+        ['btnRestore', 'btnChange', 'btnConnect'].forEach(id => {
+            let el = document.getElementById(id); if(el) el.style.display = 'none';
+        });
+        document.getElementById('btnChange').style.display = 'inline-block';
+        document.getElementById('categoriaSelect').disabled = false;
+        aggiornaRisultati();
+    }
+
+    function aggiornaTuttiMenuCategorie() {
+        const cats = [...new Set(databaseFrasi.map(i => i.categoria))].sort();
+        const mainSel = document.getElementById('categoriaSelect');
+        const mainVal = mainSel.value;
+        mainSel.innerHTML = '<option value="">-- Seleziona una categoria --</option>';
+        cats.forEach(c => {
+            let o = document.createElement('option'); o.value = c; o.innerText = c; mainSel.appendChild(o);
+        });
+        if (cats.includes(mainVal)) mainSel.value = mainVal;
+
+        const addSel = document.getElementById('nuovaCategoria');
+        addSel.innerHTML = '';
+        cats.forEach(c => {
+            let o = document.createElement('option'); o.value = c; o.innerText = c; addSel.appendChild(o);
+        });
+        addSel.innerHTML += '<option value="NEW_CAT" style="color:var(--primary); font-weight:bold;">+ Aggiungi nuova categoria...</option>';
+
+        const editSel = document.getElementById('editCategoria');
+        editSel.innerHTML = '';
+        cats.forEach(c => {
+            let o = document.createElement('option'); o.value = c; o.innerText = c; editSel.appendChild(o);
+        });
+    }
+
+    function controllaNuovaCategoria(select) {
+        if (select.value === "NEW_CAT") {
+            const nome = prompt("Inserisci il nome della nuova categoria:");
+            if (nome && nome.trim() !== "") {
+                const esiste = Array.from(select.options).some(o => o.value.toLowerCase() === nome.trim().toLowerCase());
+                if (esiste) {
+                    alert("Questa categoria esiste già.");
+                    select.selectedIndex = 0;
+                } else {
+                    let newOpt = document.createElement('option');
+                    newOpt.value = nome.trim().toUpperCase();
+                    newOpt.innerText = nome.trim().toUpperCase();
+                    select.insertBefore(newOpt, select.lastElementChild);
+                    select.value = newOpt.value;
+                }
+            } else {
+                select.selectedIndex = 0;
+            }
+        }
+    }
+
+    async function rinominaCategoriaCorrente() {
+        const vecchiaCat = document.getElementById('categoriaSelect').value;
+        if (!vecchiaCat) { alert("Seleziona prima una categoria da rinominare."); return; }
+        const nuovoNome = prompt(`Rinomina la categoria "${vecchiaCat}" in:`, vecchiaCat);
+        if (nuovoNome && nuovoNome.trim() !== "" && nuovoNome !== vecchiaCat) {
+            if (confirm(`Spostare tutte le frasi in "${nuovoNome.toUpperCase()}"?`)) {
+                databaseFrasi.forEach(f => { if (f.categoria === vecchiaCat) f.categoria = nuovoNome.toUpperCase(); });
+                await salvaSuDisco();
+                document.getElementById('categoriaSelect').value = nuovoNome.toUpperCase();
+                aggiornaRisultati();
+            }
+        }
+    }
+
+    function sostituisciTag(testo) {
+        let res = testo;
+        tags.forEach(t => {
+            const inputEl = document.getElementById(t.replace('[', '').replace(']', ''));
+            if(inputEl) {
+                const val = inputEl.value.trim();
+                if (val === "") {
+                    res = res.replaceAll(t, `<span class="missing-tag">${t}</span>`);
+                } else {
+                    res = res.replaceAll(t, val);
+                }
+            }
+        });
+        return res;
+    }
+
+    function aggiornaRisultati() {
+        const cat = document.getElementById('categoriaSelect').value;
+        const div = document.getElementById('risultati');
+        div.innerHTML = '';
+        if (!cat) return;
+
+        // MODIFICA: Ordinamento ibrido (Prima Pinned, poi Clic)
+        const messaggiFiltrati = databaseFrasi
+            .map((item, index) => ({ item, index }))
+            .filter(obj => obj.item.categoria === cat)
+            .sort((a, b) => {
+                const pinA = a.item.pinned ? 1 : 0;
+                const pinB = b.item.pinned ? 1 : 0;
+                if (pinA !== pinB) return pinB - pinA; // Regola 1: Puntina
+                return (b.item.count || 0) - (a.item.count || 0); // Regola 2: Clic decrescenti
+            });
+
+        messaggiFiltrati.forEach(obj => {
+            const item = obj.item;
+            const originalIndex = obj.index;
+
+            const card = document.createElement('div');
+            card.className = `message-card ${item.pinned ? 'is-pinned' : ''}`;
+            card.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${sostituisciTag(item.testo)}</div>
+                    <span class="click-badge">Usato: ${item.count || 0} volte</span>
+                </div>
+                <div class="action-btns">
+                    <button class="btn-action btn-pin ${item.pinned ? 'active' : ''}" onclick="togglePin(${originalIndex})">📌 Fissa</button>
+                    <button class="btn-action btn-copy" onclick="copiaMessaggio(${originalIndex}, this)">Copia</button>
+                    <button class="btn-action btn-edit" onclick="apriModale(${originalIndex})">Modifica</button>
+                    <button class="btn-action btn-delete" onclick="eliminaFrase(${originalIndex})">Elimina</button>
+                </div>
+            `;
+            div.appendChild(card);
+        });
+    }
+
+    async function togglePin(index) {
+        databaseFrasi[index].pinned = !databaseFrasi[index].pinned;
+        await salvaSuDisco();
+        aggiornaRisultati();
+    }
+
+    tags.forEach(t => {
+        let el = document.getElementById(t.replace('[', '').replace(']', ''));
+        if(el) el.oninput = aggiornaRisultati;
+    });
+
+    async function salvaSuDisco() {
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(databaseFrasi, null, 2));
+        await writable.close();
+        aggiornaTuttiMenuCategorie();
+    }
+
+    function apriModale(index) {
+        editingIndex = index;
+        const item = databaseFrasi[index];
+        document.getElementById('editCategoria').value = item.categoria;
+        document.getElementById('editTesto').value = item.testo;
+        document.getElementById('modalEdit').style.display = 'flex';
+    }
+
+    function chiudiModale() {
+        document.getElementById('modalEdit').style.display = 'none';
+        editingIndex = -1;
+    }
+
+    async function salvaModifica() {
+        if (editingIndex === -1) return;
+        databaseFrasi[editingIndex].categoria = document.getElementById('editCategoria').value;
+        databaseFrasi[editingIndex].testo = document.getElementById('editTesto').value;
+        await salvaSuDisco();
+        chiudiModale();
+        aggiornaRisultati();
+    }
+
+    async function aggiungiFrase() {
+        const testo = document.getElementById('nuovaFraseTesto').value;
+        const cat = document.getElementById('nuovaCategoria').value;
+        if (!testo.trim() || cat === "NEW_CAT") return;
+        databaseFrasi.push({ categoria: cat, testo: testo, pinned: false, count: 0 });
+        document.getElementById('nuovaFraseTesto').value = '';
+        await salvaSuDisco();
+        aggiornaRisultati();
+    }
+
+    async function eliminaFrase(index) {
+        const cat = databaseFrasi[index].categoria;
+        const count = databaseFrasi.filter(f => f.categoria === cat).length;
+        if (confirm(count === 1 ? `Eliminare l'ultima frase di "${cat}"?` : "Eliminare questa frase?")) {
+            databaseFrasi.splice(index, 1);
+            await salvaSuDisco();
+            if(count === 1) document.getElementById('categoriaSelect').value = "";
+            aggiornaRisultati();
+        }
+    }
+
+    // MODIFICA: Funzione aggiornata per contare i clic
+    function copiaMessaggio(index, btn) {
+        const testoPulito = btn.closest('.message-card').querySelector('.message-text').innerText;
+        navigator.clipboard.writeText(testoPulito).then(async () => {
+            const originalText = btn.innerText;
+            btn.innerText = "Copiato!";
+            btn.style.background = "#155724";
+
+            // Aggiungi +1 al conteggio e salva
+            databaseFrasi[index].count = (databaseFrasi[index].count || 0) + 1;
+            await salvaSuDisco();
+
+            // Dopo 1 secondo rimetti il colore originale e riordina la lista
+            setTimeout(() => { 
+                btn.innerText = originalText; 
+                btn.style.background = ""; 
+                aggiornaRisultati(); 
+            }, 1000);
+        });
+    }
+</script>
+
+</body>
+</html>

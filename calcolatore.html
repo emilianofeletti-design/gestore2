@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestore Saldo e Stralcio Professionale</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --rate: #9b59b6; --bg: #f0f2f5; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 850px; width: 100%; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 15px; }
+        .btn-reset { width: 100%; background: var(--danger); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 25px; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-reset:hover { background: #c0392b; }
+        .section { background: #fdfdfd; border: 1px solid #e1e4e8; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .section-title { font-weight: bold; color: var(--accent); margin-bottom: 10px; display: block; font-size: 0.8em; text-transform: uppercase; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; font-size: 0.85em; margin-bottom: 5px; font-weight: 600; }
+        input { width: 100%; padding: 10px; border: 2px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        .result-box { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; margin-top: 10px; border-left: 5px solid var(--success); }
+        pre { white-space: pre-wrap; font-family: 'Courier New', monospace; margin: 0; line-height: 1.5; font-size: 13px; }
+        .btn-copy { width: 100%; background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        input[readonly] { background-color: #eef2f7; font-weight: bold; }
+        .error-message { color: #ffaaaa; font-weight: bold; }
+    </style>
+</head>
+<body onload="impostaDateDefault()">
+
+<div class="container">
+    <h2>Saldo e Stralcio Web App</h2>
+    
+    <button class="btn-reset" onclick="resetForm()">🔄 Reset Dati</button>
+
+    <div class="section" style="background-color: #eef9ff; border-color: #3498db;">
+        <span class="section-title">📉 1. Simulatore Rapido Sconto</span>
+        <div class="grid">
+            <div>
+                <label>Valore A (Capitale €)</label>
+                <input type="number" id="simA" oninput="aggiorna()">
+            </div>
+            <div>
+                <label>Ipotesi Sconto (%)</label>
+                <input type="number" id="simPerc" oninput="aggiorna()">
+            </div>
+            <div style="grid-column: span 2;">
+                <label>Valore a meno lo sconto (Netto €):</label>
+                <input type="text" id="simRes" readonly>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <span class="section-title">✍️ 2. Compilazione Saldo e Stralcio</span>
+        <div class="grid">
+            <div>
+                <label>Valore D (Da Saldare €)</label>
+                <input type="number" id="valD" oninput="aggiorna()">
+            </div>
+            <div>
+                <label>Data Versamento Unica / Acconto</label>
+                <input type="date" id="dataBase" oninput="sincronizzaData(this, 'dataRestantiStralcio')">
+            </div>
+            <div>
+                <label>Importo Acconto Indicativo (€)</label>
+                <input type="number" id="primaRataStralcio_Ind" oninput="aggiorna()">
+            </div>
+            <div>
+                <label>Numero Rate Totali (Stralcio)</label>
+                <input type="number" id="totRateStralcio" value="1" min="1" oninput="aggiorna()">
+            </div>
+            <div style="grid-column: span 2;">
+                <label>Data inizio restanti rate mensili</label>
+                <input type="date" id="dataRestantiStralcio" oninput="aggiorna()">
+            </div>
+        </div>
+    </div>
+
+    <div class="section" style="border-left: 4px solid var(--rate); background-color: #fcfaff;">
+        <span class="section-title" style="color:var(--rate);">🏦 3. Rateizzazione Intero Capitale</span>
+        <div class="grid">
+            <div>
+                <label>Importo Acconto Indicativo (€)</label>
+                <input type="number" id="rateCap_R1_Ind" oninput="aggiorna()">
+            </div>
+            <div>
+                <label>Numero Rate Totali</label>
+                <input type="number" id="rateCap_Tot" value="12" min="2" oninput="aggiorna()">
+            </div>
+            <div>
+                <label>Data 1ª Rata (Acconto)</label>
+                <input type="date" id="rateCap_D1" oninput="sincronizzaData(this, 'rateCap_D2')">
+            </div>
+            <div>
+                <label>Data 2ª Rata (Inizio piano mensile)</label>
+                <input type="date" id="rateCap_D2" oninput="aggiorna()">
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">Testo Unica Soluzione</div>
+    <div class="result-box"><pre id="testoUnico"></pre></div>
+    <button class="btn-copy" onclick="copia('testoUnico')">COPIA UNICA SOLUZIONE</button>
+
+    <div class="section-title" style="margin-top:20px;">Testo Rateizzato Sconto</div>
+    <div class="result-box" style="border-left-color: #e67e22;"><pre id="testoRateizzato"></pre></div>
+    <button class="btn-copy" style="background:#e67e22;" onclick="copia('testoRateizzato')">COPIA RATEIZZATO SCONTO</button>
+
+    <div class="section-title" style="margin-top:20px; color: var(--rate);">Testo Rateizzazione Capitale</div>
+    <div class="result-box" style="border-left-color: var(--rate);"><pre id="testoCapitale"></pre></div>
+    <button class="btn-copy" style="background:var(--rate);" onclick="copia('testoCapitale')">COPIA RATEIZZAZIONE CAPITALE</button>
+</div>
+
+<script>
+    function impostaDateDefault() {
+        const oggi = new Date();
+        const dataAcconto = new Date(oggi);
+        dataAcconto.setDate(oggi.getDate() + 5);
+        const accontoISO = dataAcconto.toISOString().split('T')[0];
+        
+        document.getElementById('dataBase').value = accontoISO;
+        document.getElementById('rateCap_D1').value = accontoISO;
+        
+        sincronizzaData(document.getElementById('dataBase'), 'dataRestantiStralcio');
+        sincronizzaData(document.getElementById('rateCap_D1'), 'rateCap_D2');
+        
+        aggiorna();
+    }
+
+    function sincronizzaData(sorgente, idDestinazione) {
+        if (!sorgente.value) return;
+        
+        const dataPartenza = new Date(sorgente.value);
+        const dataDest = new Date(dataPartenza);
+        dataDest.setMonth(dataPartenza.getMonth() + 1);
+        
+        document.getElementById(idDestinazione).value = dataDest.toISOString().split('T')[0];
+        aggiorna();
+    }
+
+    function resetForm() {
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            if (input.type === 'number' || input.type === 'text') {
+                input.value = '';
+            }
+        });
+        document.getElementById('totRateStralcio').value = '1';
+        document.getElementById('rateCap_Tot').value = '12';
+        impostaDateDefault();
+    }
+
+    function aggiorna() {
+        const A = parseFloat(document.getElementById('simA').value) || 0;
+        const sPerc = parseFloat(document.getElementById('simPerc').value) || 0;
+        const D = parseFloat(document.getElementById('valD').value) || 0;
+        
+        document.getElementById('simRes').value = (A - (A * sPerc / 100)).toFixed(2) + " €";
+        
+        if (A > 0) {
+            const C = A - D;
+            const B = (C / A * 100).toFixed(2);
+            const dataU = document.getElementById('dataBase').value;
+            document.getElementById('testoUnico').innerText = `SALDO E STRALCIO UNICA SOLUZIONE\nImporto capitale ${A.toFixed(2)} €\nImporto di sconto ${B}% ${C.toFixed(2)} €\nImporto da saldare ${(D/A*100).toFixed(2)}% ${D.toFixed(2)} €\nData versamento: ${dataU ? formattaData(dataU) : "__.__.__"}`;
+        } else {
+            document.getElementById('testoUnico').innerText = 'Inserisci un valore per il capitale (A)';
+        }
+
+        aggiornaRateizzatoSconto(A, D);
+        aggiornaRateizzazioneCapitale(A);
+    }
+
+    function aggiornaRateizzatoSconto(A, D) {
+        if (A <= 0) {
+            document.getElementById('testoRateizzato').innerText = 'Inserisci un valore per il capitale (A)';
+            return;
+        }
+
+        const C = A - D;
+        const B = (C / A * 100).toFixed(2);
+        const dataBase = document.getElementById('dataBase').value;
+        const accStralcioInd = parseFloat(document.getElementById('primaRataStralcio_Ind').value) || 0;
+        const nRateStralcio = parseInt(document.getElementById('totRateStralcio').value) || 1;
+        const dataInizioStralcio = document.getElementById('dataRestantiStralcio').value;
+
+        if (nRateStralcio === 1) {
+            document.getElementById('testoRateizzato').innerText = 
+                `SALDO E STRALCIO RATEIZZATO (UNICA SOLUZIONE)\n` +
+                `Importo capitale ${A.toFixed(2)} €\n` +
+                `Importo di sconto ${B}% ${C.toFixed(2)} €\n` +
+                `Importo da saldare ${(D/A*100).toFixed(2)}% ${D.toFixed(2)} €\n` +
+                `Unico versamento entro il ${dataBase ? formattaData(dataBase) : "__.__.__"}`;
+            return;
+        }
+
+        if (accStralcioInd >= D) {
+            document.getElementById('testoRateizzato').innerHTML = 
+                '<span class="error-message">ERRORE: L\'acconto non può essere uguale o superiore al totale da saldare (D).</span>';
+            return;
+        }
+
+        const nRateMesiStralcio = nRateStralcio - 1;
+        const residuoStralcio = D - accStralcioInd;
+
+        // Controllo che il residuo sia sufficiente per avere rate positive
+        if (residuoStralcio < nRateMesiStralcio) {
+            document.getElementById('testoRateizzato').innerHTML = 
+                '<span class="error-message">ERRORE: Il residuo dopo l\'acconto è troppo piccolo per essere suddiviso in rate intere positive. Riduci l\'acconto o aumenta il numero di rate.</span>';
+            return;
+        }
+
+        // Calcolo rata intera (senza decimali)
+        const rataStralcioIntera = Math.floor(residuoStralcio / nRateMesiStralcio);
+        const accontoStralcioReale = D - (rataStralcioIntera * nRateMesiStralcio);
+
+        document.getElementById('testoRateizzato').innerText = 
+            `SALDO E STRALCIO RATEIZZATO (rate senza decimali)\n` +
+            `Importo capitale ${A.toFixed(2)} €\n` +
+            `Importo di sconto ${B}% ${C.toFixed(2)} €\n` +
+            `Importo da saldare ${(D/A*100).toFixed(2)}% ${D.toFixed(2)} €\n` +
+            `da suddividere in:\n` +
+            `acconto ${accontoStralcioReale.toFixed(2)} € entro la data del ${dataBase ? formattaData(dataBase) : "__.__.__"}\n` +
+            `${nRateMesiStralcio} rate da ${rataStralcioIntera} € con cadenza mensile a partire dal ${dataInizioStralcio ? formattaData(dataInizioStralcio) : "__.__.__"}`;
+    }
+
+    function aggiornaRateizzazioneCapitale(A) {
+        if (A <= 0) {
+            document.getElementById('testoCapitale').innerText = 'Inserisci un valore per il capitale (A)';
+            return;
+        }
+
+        const accCapInd = parseFloat(document.getElementById('rateCap_R1_Ind').value) || 0;
+        let nTotaleRateCap = parseInt(document.getElementById('rateCap_Tot').value) || 2;
+        if (nTotaleRateCap < 2) nTotaleRateCap = 2;
+
+        const d1c = document.getElementById('rateCap_D1').value;
+        const d2c = document.getElementById('rateCap_D2').value;
+
+        if (accCapInd >= A) {
+            document.getElementById('testoCapitale').innerHTML = 
+                '<span class="error-message">ERRORE: L\'acconto non può essere uguale o superiore al capitale totale (A).</span>';
+            return;
+        }
+
+        const nRateFisseCap = nTotaleRateCap - 1;
+        const residuoDaRateizzare = A - accCapInd;
+
+        if (residuoDaRateizzare < nRateFisseCap) {
+            document.getElementById('testoCapitale').innerHTML = 
+                '<span class="error-message">ERRORE: Il residuo dopo l\'acconto è troppo piccolo per essere suddiviso in rate intere positive. Riduci l\'acconto o aumenta il numero di rate.</span>';
+            return;
+        }
+
+        const rataFissaCapIntera = Math.floor(residuoDaRateizzare / nRateFisseCap);
+        const accontoCapReale = A - (rataFissaCapIntera * nRateFisseCap);
+        const importoTotaleResiduo = (rataFissaCapIntera * nRateFisseCap).toFixed(2);
+
+        let giornoMese = "__";
+        if (d2c) {
+            const [y, m, d] = d2c.split('-');
+            giornoMese = d;
+        }
+
+        let txtC = `RATEIZZAZIONE IMPORTO CAPITALE (rate senza decimali)\n`;
+        txtC += `Importo totale da rateizzare: ${A.toFixed(2)} €\n`;
+        txtC += `acconto ${accontoCapReale.toFixed(2)} € entro la data del ${d1c ? formattaData(d1c) : "__.__.__"}\n`;
+        txtC += `residuo ${importoTotaleResiduo} € in ${nRateFisseCap} rate da ${rataFissaCapIntera} € da effettuare ogni ${giornoMese} del mese dal ${d2c ? formattaData(d2c) : "__.__.__"}`;
+        
+        document.getElementById('testoCapitale').innerText = txtC;
+    }
+
+    function formattaData(d) {
+        if (!d) return "__.__.__";
+        const [y, m, day] = d.split('-');
+        return `${day}.${m}.${y.slice(-2)}`;
+    }
+
+    function copia(id) {
+        const t = document.getElementById(id).innerText;
+        if(!t) return;
+        navigator.clipboard.writeText(t);
+        alert("Copiato!");
+    }
+</script>
+</body>
+</html>
