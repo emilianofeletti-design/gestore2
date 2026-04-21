@@ -182,7 +182,7 @@
 
         if (nRateStralcio === 1) {
             document.getElementById('testoRateizzato').innerText = 
-                `SALDO E STRALCIO RATEIZZATO (UNICA SOLUZIONE)\n` +
+                `SALDO E STRALCIO RATEIZZATO \n` +
                 `Importo capitale ${A.toFixed(2)} €\n` +
                 `Importo di sconto ${B}% ${C.toFixed(2)} €\n` +
                 `Importo da saldare ${(D/A*100).toFixed(2)}% ${D.toFixed(2)} €\n` +
@@ -258,7 +258,7 @@
             giornoMese = d;
         }
 
-        let txtC = `RATEIZZAZIONE IMPORTO CAPITALE (rate senza decimali)\n`;
+        let txtC = `RATEIZZAZIONE IMPORTO CAPITALE \n`;
         txtC += `Importo totale da rateizzare: ${A.toFixed(2)} €\n`;
         txtC += `acconto ${accontoCapReale.toFixed(2)} € entro la data del ${d1c ? formattaData(d1c) : "__.__.__"}\n`;
         txtC += `residuo ${importoTotaleResiduo} € in ${nRateFisseCap} rate da ${rataFissaCapIntera} € da effettuare ogni ${giornoMese} del mese dal ${d2c ? formattaData(d2c) : "__.__.__"}`;
